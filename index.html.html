@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>咳とまらん</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+:root {
+  --bg:#f5f0e8; --green:#1e5c30; --green2:#2d7a45; --green3:#e8f2ec;
+  --gold2:#d4a017; --red:#c0392b; --text:#1a1a1a; --muted:#888;
+  --white:#fff; --shadow:0 4px 20px rgba(0,0,0,0.12); --radius:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;}
+
+.screen{display:none;flex-direction:column;min-height:100vh;animation:fadeUp .3s ease both;}
+.screen.active{display:flex;}
+.rank-screen{display:none;flex-direction:column;min-height:100vh;background:var(--green);animation:fadeUp .3s ease both;}
+.rank-screen.active{display:flex;}
+.result-screen{display:none;flex-direction:column;min-height:100vh;background:var(--green);align-items:center;justify-content:center;padding:40px 20px;animation:fadeUp .3s ease both;}
+.result-screen.active{display:flex;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+.top-bar{background:var(--green);padding:20px 24px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 12px rgba(0,0,0,.2);position:sticky;top:0;z-index:10;}
+.back-btn{background:rgba(255,255,255,.15);border:none;color:white;font-size:26px;width:48px;height:48px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.back-btn:active{background:rgba(255,255,255,.3);}
+.top-title{font-size:clamp(22px,4vw,30px);font-weight:900;color:white;letter-spacing:3px;flex:1;}
+.top-sub{font-size:clamp(11px,2vw,14px);color:rgba(255,255,255,.6);letter-spacing:2px;}
+.top-right-btn{background:rgba(255,255,255,.15);border:none;color:white;font-size:22px;width:48px;height:48px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+.content{flex:1;padding:24px 20px;max-width:760px;width:100%;margin:0 auto;}
+.home-header{background:var(--green);padding:32px 28px 28px;text-align:center;}
+.home-logo{font-size:clamp(32px,6vw,50px);font-weight:900;color:white;letter-spacing:4px;}
+.home-logo span{color:#f0c040;}
+.home-date{font-size:clamp(13px,2.5vw,18px);color:rgba(255,255,255,.7);margin-top:6px;letter-spacing:2px;}
+.section-label{font-size:clamp(12px,2vw,15px);font-weight:700;color:var(--muted);letter-spacing:4px;margin-bottom:12px;margin-top:28px;padding-left:4px;}
+
+.table-card{background:var(--white);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;border-left:6px solid var(--green);}
+.table-icon{font-size:28px;width:44px;text-align:center;flex-shrink:0;cursor:pointer;}
+.table-info{flex:1;cursor:pointer;}
+.table-name{font-size:clamp(19px,3.5vw,26px);font-weight:900;}
+.table-meta{font-size:clamp(12px,2vw,15px);color:var(--muted);margin-top:4px;}
+
+.empty-state{background:var(--white);border-radius:var(--radius);padding:36px 24px;text-align:center;color:var(--muted);font-size:clamp(15px,2.5vw,19px);box-shadow:var(--shadow);}
+.empty-state .emoji{font-size:44px;margin-bottom:10px;}
+
+.fab{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--green);color:white;font-family:'Noto Sans JP',sans-serif;font-size:clamp(18px,3.5vw,24px);font-weight:900;letter-spacing:4px;padding:20px 40px;border:none;border-radius:60px;cursor:pointer;box-shadow:0 8px 32px rgba(30,92,48,.45);white-space:nowrap;transition:transform .15s;z-index:20;}
+.fab:active{transform:translateX(-50%) scale(.97);}
+
+.players-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;}
+.player-chip{background:var(--green3);color:var(--green);font-size:clamp(15px,3vw,21px);font-weight:700;padding:9px 18px;border-radius:50px;}
+.round-card{background:var(--white);border-radius:var(--radius);padding:18px 22px;margin-bottom:12px;box-shadow:var(--shadow);}
+.round-header{font-size:clamp(13px,2.5vw,17px);color:var(--muted);font-weight:700;margin-bottom:10px;}
+.round-ranks{display:flex;gap:10px;flex-wrap:wrap;}
+.round-rank-item{display:flex;align-items:center;gap:8px;font-size:clamp(17px,3vw,22px);font-weight:700;}
+.r-num{font-size:clamp(13px,2.5vw,17px);color:var(--muted);font-weight:900;min-width:28px;}
+
+.search-box{width:100%;padding:16px 18px;font-family:'Noto Sans JP',sans-serif;font-size:clamp(17px,3.5vw,23px);border:3px solid #e0e0e0;border-radius:var(--radius);background:white;color:var(--text);margin-bottom:18px;outline:none;transition:border-color .2s;}
+.search-box:focus{border-color:var(--green2);}
+.search-box::placeholder{color:#bbb;}
+
+.player-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+@media(min-width:500px){.player-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:700px){.player-grid{grid-template-columns:repeat(4,1fr);}}
+
+.player-btn{background:white;border:3px solid #e0e0e0;border-radius:16px;padding:18px 10px;font-family:'Noto Sans JP',sans-serif;font-size:clamp(19px,4vw,27px);font-weight:700;color:var(--text);cursor:pointer;text-align:center;position:relative;min-height:76px;display:flex;align-items:center;justify-content:center;transition:all .15s;box-shadow:var(--shadow);}
+.player-btn.frequent::after{content:'★';font-size:12px;color:var(--gold2);position:absolute;top:6px;right:8px;}
+.player-btn.selected{border-color:var(--green2);background:var(--green3);color:var(--green);}
+.player-btn.selected::before{content:'✓';position:absolute;top:6px;left:8px;font-size:15px;color:var(--green2);font-weight:900;}
+.player-btn:active{transform:scale(.96);}
+
+.selected-bar{background:var(--green);border-radius:var(--radius);padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(30,92,48,.3);}
+.selected-bar .label{font-size:clamp(13px,2.5vw,17px);color:rgba(255,255,255,.7);font-weight:700;flex-shrink:0;}
+.selected-tag{background:rgba(255,255,255,.2);color:white;font-size:clamp(14px,3vw,20px);font-weight:700;padding:5px 14px;border-radius:50px;}
+.selected-count{margin-left:auto;font-size:clamp(19px,4vw,27px);font-weight:900;color:white;}
+.selected-count em{color:#f0c040;font-style:normal;}
+
+.ranking-container{background:var(--white);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:18px;}
+.ranking-row{display:flex;align-items:center;padding:16px 20px;gap:16px;border-bottom:1px solid #f0f0f0;}
+.ranking-row:last-child{border-bottom:none;}
+.ranking-row:first-child{background:#fffaf0;}
+.ranking-pos{font-size:clamp(20px,4vw,30px);font-weight:900;min-width:42px;text-align:center;}
+.pos-1{color:#c0392b;}.pos-2{color:#1a4e8a;}.pos-3{color:#2d7a45;}.pos-4{color:#aaa;}
+.ranking-name{flex:1;font-size:clamp(19px,3.5vw,27px);font-weight:700;}
+.ranking-wins .num{font-size:clamp(20px,4vw,28px);font-weight:900;color:var(--green);}
+.ranking-wins .unit{font-size:clamp(12px,2vw,15px);color:var(--muted);font-weight:700;}
+
+.rank-selected-list{padding:14px 20px 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;max-width:680px;width:100%;margin:0 auto;}
+.rank-done-item{background:rgba(255,255,255,.18);border-radius:50px;padding:7px 18px;display:flex;align-items:center;gap:8px;}
+.rank-done-num{font-size:clamp(12px,2.5vw,16px);color:rgba(255,255,255,.6);font-weight:900;}
+.rank-done-name{font-size:clamp(16px,3.5vw,24px);font-weight:700;color:white;}
+.rank-question{padding:24px 24px 14px;text-align:center;}
+.rank-q-label{font-size:clamp(19px,4vw,29px);font-weight:900;color:rgba(255,255,255,.7);letter-spacing:3px;margin-bottom:6px;}
+.rank-q-num{font-size:clamp(54px,12vw,94px);font-weight:900;color:#f0c040;line-height:1;text-shadow:0 4px 20px rgba(0,0,0,.3);}
+.rank-q-unit{font-size:clamp(24px,5vw,38px);font-weight:900;color:white;margin-top:4px;letter-spacing:4px;}
+.rank-player-list{flex:1;display:flex;flex-direction:column;gap:14px;padding:14px 18px 28px;max-width:680px;width:100%;margin:0 auto;}
+.rank-player-btn{flex:1;background:white;border:none;border-radius:22px;font-family:'Noto Sans JP',sans-serif;font-size:clamp(30px,7vw,54px);font-weight:900;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:96px;box-shadow:0 6px 24px rgba(0,0,0,.2);transition:transform .1s;letter-spacing:4px;}
+.rank-player-btn:active{transform:scale(.96);}
+
+.result-title{font-size:clamp(21px,4vw,29px);font-weight:900;color:rgba(255,255,255,.7);letter-spacing:4px;margin-bottom:28px;text-align:center;}
+.result-list{width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px;margin-bottom:36px;}
+.result-item{background:white;border-radius:18px;padding:18px 24px;display:flex;align-items:center;gap:18px;box-shadow:0 4px 20px rgba(0,0,0,.15);animation:fadeUp .3s ease both;}
+.result-item:nth-child(1){animation-delay:.05s;border-left:7px solid #c0392b;}
+.result-item:nth-child(2){animation-delay:.12s;border-left:7px solid #1a4e8a;}
+.result-item:nth-child(3){animation-delay:.19s;border-left:7px solid #2d7a45;}
+.result-item:nth-child(4){animation-delay:.26s;border-left:7px solid #aaa;}
+.result-medal{font-size:34px;flex-shrink:0;}
+.result-name{flex:1;font-size:clamp(22px,5vw,36px);font-weight:900;letter-spacing:2px;}
+.result-rank-num{font-size:clamp(17px,3vw,23px);font-weight:700;color:var(--muted);}
+.result-btns{width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px;}
+.result-btn{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:white;font-family:'Noto Sans JP',sans-serif;font-size:clamp(17px,3.5vw,25px);font-weight:700;letter-spacing:4px;padding:20px;border-radius:16px;cursor:pointer;text-align:center;}
+.result-btn.primary-btn{background:white;color:var(--green);border-color:white;font-weight:900;}
+.result-btn:active{opacity:.8;}
+
+.member-item{background:white;border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);margin-bottom:10px;}
+.member-name{flex:1;font-size:clamp(19px,3.5vw,27px);font-weight:700;}
+.member-star{background:none;border:none;font-size:26px;cursor:pointer;padding:4px 8px;border-radius:8px;}
+.member-del{background:#fff0f0;border:2px solid #fcc;color:var(--red);font-size:18px;font-weight:900;width:44px;height:44px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.member-del:active{background:#fdd;}
+
+.add-member-row{display:flex;gap:10px;margin-top:6px;margin-bottom:20px;}
+.add-member-input{flex:1;padding:16px;font-family:'Noto Sans JP',sans-serif;font-size:clamp(19px,4vw,25px);border:3px solid #e0e0e0;border-radius:14px;outline:none;transition:border-color .2s;}
+.add-member-input:focus{border-color:var(--green2);}
+.add-member-input::placeholder{color:#bbb;}
+.add-member-btn{background:var(--green);color:white;border:none;font-family:'Noto Sans JP',sans-serif;font-size:clamp(17px,3.5vw,23px);font-weight:900;padding:0 22px;border-radius:14px;cursor:pointer;white-space:nowrap;letter-spacing:2px;}
+.add-member-btn:active{opacity:.85;}
+.member-hint{font-size:clamp(12px,2vw,15px);color:var(--muted);margin-bottom:14px;}
+.error-msg{color:var(--red);font-size:clamp(13px,2.5vw,17px);font-weight:700;padding:6px 2px;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal-overlay.active{display:flex;}
+.modal{background:white;border-radius:22px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:fadeUp .25s ease;}
+.modal h3{font-size:clamp(19px,4vw,26px);font-weight:900;margin-bottom:18px;text-align:center;}
+.modal-input{width:100%;padding:14px 16px;font-family:'Noto Sans JP',sans-serif;font-size:clamp(19px,4vw,25px);border:3px solid #e0e0e0;border-radius:12px;margin-bottom:14px;outline:none;transition:border-color .2s;}
+.modal-input:focus{border-color:var(--green2);}
+.modal-row{display:flex;gap:10px;}
+.modal-btn{flex:1;padding:15px;font-family:'Noto Sans JP',sans-serif;font-size:clamp(16px,3vw,21px);font-weight:700;border:none;border-radius:12px;cursor:pointer;}
+.modal-btn.ok{background:var(--green);color:white;}
+.modal-btn.danger{background:var(--red);color:white;}
+.modal-btn.cancel{background:#f0f0f0;color:#666;}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="s-home" class="screen active">
+  <div class="home-header">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div style="flex:1;text-align:center;">
+        <div class="home-logo">🀄 <span>咳とまらん</span></div>
+        <div class="home-date" id="today-date"></div>
+      </div>
+      <button class="top-right-btn" onclick="showSettings()" style="background:rgba(255,255,255,.13);margin-top:4px;">⚙️</button>
+    </div>
+  </div>
+  <div class="content" style="padding-bottom:110px;">
+    <div class="section-label">ランキング</div>
+    <div class="ranking-container" id="home-ranking"></div>
+    <div class="section-label">今日の卓</div>
+    <div id="table-list"></div>
+  </div>
+  <button class="fab" onclick="showCreate()">＋ 新しく卓を作る</button>
+</div>
+
+<!-- CREATE TABLE -->
+<div id="s-create" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div>
+      <div class="top-title">卓を作る</div>
+      <div class="top-sub">参加者を４人選んでください</div>
+    </div>
+  </div>
+  <div class="content" style="padding-bottom:130px;">
+    <div id="selected-bar" class="selected-bar">
+      <span class="label">選択中：</span>
+      <span id="selected-names"></span>
+      <span class="selected-count"><em id="sel-count">0</em> / 4</span>
+    </div>
+    <input class="search-box" id="search-input" type="text" placeholder="🔍  名前で検索…" oninput="filterPlayers()" />
+    <div class="section-label">よく使う ★</div>
+    <div class="player-grid" id="frequent-grid"></div>
+    <div class="section-label" id="all-label">すべて</div>
+    <div class="player-grid" id="all-grid"></div>
+  </div>
+  <button class="fab" id="start-btn" onclick="startTable()" style="background:#aaa;box-shadow:none;" disabled>この４人で開始　→</button>
+</div>
+
+<!-- DETAIL -->
+<div id="s-detail" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div>
+      <div class="top-title" id="detail-title"></div>
+      <div class="top-sub" id="detail-sub"></div>
+    </div>
+  </div>
+  <div class="content" style="padding-bottom:130px;">
+    <div id="detail-players" class="players-row"></div>
+    <div class="section-label">通算ランキング</div>
+    <div class="ranking-container" id="ranking-container"></div>
+    <div class="section-label">対局履歴</div>
+    <div id="rounds-list"></div>
+    <div id="no-rounds" class="empty-state" style="display:none;"><div class="emoji">🀄</div>まだ対局がありません</div>
+  </div>
+  <button class="fab" onclick="startRound()">＋ 新しく対局を入力</button>
+</div>
+
+<!-- SETTINGS -->
+<div id="s-settings" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div class="top-title">メンバー管理</div>
+  </div>
+  <div class="content" style="padding-bottom:40px;">
+    <div class="section-label">新しいメンバーを追加</div>
+    <div class="add-member-row">
+      <input class="add-member-input" id="new-member-input" type="text" placeholder="名前を入力" maxlength="8"
+        onkeydown="if(event.key==='Enter')addMember()" />
+      <button class="add-member-btn" onclick="addMember()">追加</button>
+    </div>
+    <div class="error-msg" id="member-error"></div>
+    <div class="section-label">メンバー一覧</div>
+    <div class="member-hint">★ = よく使う（卓作成で上に表示）</div>
+    <div id="member-list"></div>
+  </div>
+</div>
+
+<!-- RANK INPUT -->
+<div id="s-rank" class="rank-screen">
+  <div class="rank-selected-list" id="rank-done-list"></div>
+  <div class="rank-question">
+    <div class="rank-q-label">何位は誰？</div>
+    <div class="rank-q-num" id="rank-q-num">1</div>
+    <div class="rank-q-unit">位</div>
+  </div>
+  <div class="rank-player-list" id="rank-player-list"></div>
+</div>
+
+<!-- RESULT -->
+<div id="s-result" class="result-screen">
+  <div class="result-title">対局結果</div>
+  <div class="result-list" id="result-list"></div>
+  <div class="result-btns">
+    <button class="result-btn primary-btn" onclick="anotherRound()">続けてもう１局</button>
+    <button class="result-btn" onclick="goDetail()">卓に戻る</button>
+  </div>
+</div>
+
+<!-- MODAL: 卓名 -->
+<div class="modal-overlay" id="modal-table-name">
+  <div class="modal">
+    <h3>卓の名前</h3>
+    <input class="modal-input" id="table-name-input" type="text" placeholder="例：卓A" maxlength="10" />
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modal-table-name')">キャンセル</button>
+      <button class="modal-btn ok" onclick="confirmCreate()">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 削除確認 -->
+<div class="modal-overlay" id="modal-del-confirm">
+  <div class="modal">
+    <h3 id="del-confirm-text">削除しますか？</h3>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modal-del-confirm')">キャンセル</button>
+      <button class="modal-btn danger" onclick="confirmDelete()">削　除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS_MEMBERS = 'mahjong_members';
+const LS_TABLES  = 'mahjong_tables';
+const MEDALS = ['🥇','🥈','🥉','　'];
+const POS_CLASS = ['pos-1','pos-2','pos-3','pos-4'];
+
+function loadMembers() {
+  try { const d = localStorage.getItem(LS_MEMBERS); if (d) return JSON.parse(d); } catch(e) {}
+  return [
+    {name:'田中',frequent:true},{name:'鈴木',frequent:true},
+    {name:'佐藤',frequent:true},{name:'山田',frequent:true},
+    {name:'伊藤',frequent:false},{name:'渡辺',frequent:false},
+    {name:'中村',frequent:false},{name:'小林',frequent:false},
+  ];
+}
+function saveMembers() { localStorage.setItem(LS_MEMBERS, JSON.stringify(members)); }
+function loadTables() {
+  try { const d = localStorage.getItem(LS_TABLES); if (d) return JSON.parse(d); } catch(e) {}
+  return [];
+}
+function saveTables() { localStorage.setItem(LS_TABLES, JSON.stringify(tables)); }
+
+let members = loadMembers();
+let tables   = loadTables();
+let currentTableId = null;
+let pendingPlayers = [];
+let rankState = { remaining:[], done:[] };
+let pendingDeleteName = null;
+let pendingDeleteTableId = null;
+
+function $(id) { return document.getElementById(id); }
+function show(id) {
+  document.querySelectorAll('.screen,.rank-screen,.result-screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function closeModal(id) { $(id).classList.remove('active'); }
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+}
+
+// ===== HOME =====
+function renderHome() {
+  $('today-date').textContent = today();
+
+  // 全卓の全対局からプレイヤー別集計
+  const stats = {};
+  tables.forEach(t => {
+    t.rounds.forEach(r => {
+      r.ranks.forEach(item => {
+        if (!stats[item.name]) stats[item.name] = {w1:0,w2:0,w3:0,w4:0,games:0};
+        stats[item.name].games++;
+        stats[item.name]['w'+item.rank]++;
+      });
+    });
+  });
+  const ranked = Object.entries(stats).sort((a,b)=>b[1].w1-a[1].w1||a[1].w4-b[1].w4);
+  if (!ranked.length) {
+    $('home-ranking').innerHTML = '<div style="padding:22px;text-align:center;color:var(--muted);font-size:clamp(14px,2.5vw,18px);">対局を入力するとここに表示されます</div>';
+  } else {
+    $('home-ranking').innerHTML = ranked.map(([name,s],i) =>
+      '<div class="ranking-row">' +
+        '<div class="ranking-pos ' + POS_CLASS[Math.min(i,3)] + '">' + MEDALS[Math.min(i,3)] + (i+1) + '</div>' +
+        '<div class="ranking-name">' + name + '</div>' +
+        '<div class="ranking-wins"><div><span class="num">' + s.w1 + '</span><span class="unit"> 回１位</span></div>' +
+        '<div style="color:#aaa;font-size:13px;">' + s.games + '局</div></div>' +
+      '</div>'
+    ).join('');
+  }
+
+  const list = $('table-list');
+  if (!tables.length) {
+    list.innerHTML = '<div class="empty-state"><div class="emoji">🀄</div>今日の卓はまだありません</div>';
+    return;
+  }
+  list.innerHTML = tables.map(t => {
+    const r = t.rounds.length;
+    return '<div class="table-card">' +
+      '<div class="table-icon" onclick="openDetail(' + t.id + ')">🀄</div>' +
+      '<div class="table-info" onclick="openDetail(' + t.id + ')">' +
+        '<div class="table-name">' + t.name + '</div>' +
+        '<div class="table-meta">' + t.players.join('・') + '&emsp;' + (r ? r+'局完了' : 'まだ対局なし') + '</div>' +
+      '</div>' +
+      '<button class="member-del" onclick="deleteTable(' + t.id + ')">✕</button>' +
+    '</div>';
+  }).join('');
+}
+function goHome() { renderHome(); show('s-home'); }
+
+// ===== SETTINGS =====
+function showSettings() {
+  renderMemberList();
+  $('new-member-input').value = '';
+  $('member-error').textContent = '';
+  show('s-settings');
+}
+function renderMemberList() {
+  const all = [...members.filter(m=>m.frequent), ...members.filter(m=>!m.frequent)];
+  $('member-list').innerHTML = all.map(m =>
+    '<div class="member-item">' +
+      '<div class="member-name">' + m.name + '</div>' +
+      '<button class="member-star" onclick="toggleFrequent(\'' + m.name + '\')">' + (m.frequent ? '★' : '☆') + '</button>' +
+      '<button class="member-del" onclick="deleteMember(\'' + m.name + '\')">✕</button>' +
+    '</div>'
+  ).join('');
+}
+function addMember() {
+  const name = $('new-member-input').value.trim();
+  $('member-error').textContent = '';
+  if (!name) { $('member-error').textContent = '名前を入力してください'; return; }
+  if (members.find(m=>m.name===name)) { $('member-error').textContent = '同じ名前がすでにいます'; return; }
+  members.push({name, frequent:false});
+  saveMembers();
+  $('new-member-input').value = '';
+  renderMemberList();
+}
+function deleteMember(name) {
+  pendingDeleteName = name;
+  pendingDeleteTableId = null;
+  $('del-confirm-text').textContent = '「' + name + '」を削除しますか？';
+  $('modal-del-confirm').classList.add('active');
+}
+function deleteTable(id) {
+  const t = tables.find(t=>t.id===id);
+  if (!t) return;
+  pendingDeleteTableId = id;
+  pendingDeleteName = null;
+  $('del-confirm-text').textContent = '「' + t.name + '」を削除しますか？';
+  $('modal-del-confirm').classList.add('active');
+}
+function confirmDelete() {
+  closeModal('modal-del-confirm');
+  if (pendingDeleteName) {
+    members = members.filter(m=>m.name!==pendingDeleteName);
+    pendingDeleteName = null;
+    saveMembers();
+    renderMemberList();
+  } else if (pendingDeleteTableId !== null) {
+    tables = tables.filter(t=>t.id!==pendingDeleteTableId);
+    pendingDeleteTableId = null;
+    saveTables();
+    renderHome();
+  }
+}
+function toggleFrequent(name) {
+  const m = members.find(m=>m.name===name);
+  if (m) { m.frequent = !m.frequent; saveMembers(); renderMemberList(); }
+}
+
+// ===== CREATE =====
+function showCreate() {
+  pendingPlayers = [];
+  $('search-input').value = '';
+  renderPlayerGrids('');
+  updateSelectedBar();
+  show('s-create');
+}
+function renderPlayerGrids(q) {
+  const freq = members.filter(m=>m.frequent && m.name.includes(q));
+  const rest = members.filter(m=>!m.frequent && m.name.includes(q));
+  $('frequent-grid').innerHTML = freq.map(m=>playerBtnHtml(m.name,true)).join('');
+  $('all-grid').innerHTML = rest.map(m=>playerBtnHtml(m.name,false)).join('');
+  $('all-label').style.display = rest.length ? '' : 'none';
+}
+function playerBtnHtml(name,freq) {
+  const sel = pendingPlayers.includes(name);
+  return '<button class="player-btn ' + (freq?'frequent':'') + ' ' + (sel?'selected':'') + '" onclick="togglePlayer(\'' + name + '\')">' + name + '</button>';
+}
+function filterPlayers() { renderPlayerGrids($('search-input').value.trim()); }
+function togglePlayer(name) {
+  if (pendingPlayers.includes(name)) pendingPlayers = pendingPlayers.filter(n=>n!==name);
+  else if (pendingPlayers.length < 4) pendingPlayers.push(name);
+  updateSelectedBar();
+  renderPlayerGrids($('search-input').value.trim());
+}
+function updateSelectedBar() {
+  const n = pendingPlayers.length;
+  $('sel-count').textContent = n;
+  $('selected-names').innerHTML = pendingPlayers.map(p=>'<span class="selected-tag">'+p+'</span>').join('');
+  const btn = $('start-btn');
+  if (n===4) { btn.disabled=false; btn.style.background='var(--green)'; btn.style.boxShadow='0 8px 32px rgba(30,92,48,.45)'; }
+  else { btn.disabled=true; btn.style.background='#aaa'; btn.style.boxShadow='none'; }
+}
+function startTable() {
+  if (pendingPlayers.length!==4) return;
+  $('table-name-input').value = '卓' + String.fromCharCode(65+tables.length);
+  $('modal-table-name').classList.add('active');
+}
+function confirmCreate() {
+  const name = $('table-name-input').value.trim() || '卓'+(tables.length+1);
+  const id = Date.now();
+  tables.push({id, name, players:[...pendingPlayers], rounds:[]});
+  saveTables();
+  closeModal('modal-table-name');
+  currentTableId = id;
+  renderDetail();
+  show('s-detail');
+}
+
+// ===== DETAIL =====
+function openDetail(id) { currentTableId=id; renderDetail(); show('s-detail'); }
+function getTable() { return tables.find(t=>t.id===currentTableId); }
+function renderDetail() {
+  const t = getTable();
+  $('detail-title').textContent = t.name;
+  $('detail-sub').textContent = t.players.join('・');
+  $('detail-players').innerHTML = t.players.map(p=>'<span class="player-chip">'+p+'</span>').join('');
+  const stats = {};
+  t.players.forEach(p=>{ stats[p]={w1:0,w2:0,w3:0,w4:0,games:0}; });
+  t.rounds.forEach(r=>{ r.ranks.forEach(item=>{ stats[item.name].games++; stats[item.name]['w'+item.rank]++; }); });
+  const sorted = [...t.players].sort((a,b)=>stats[b].w1-stats[a].w1||stats[a].w4-stats[b].w4);
+  $('ranking-container').innerHTML = sorted.map((p,i)=>
+    '<div class="ranking-row">' +
+      '<div class="ranking-pos ' + POS_CLASS[i] + '">' + MEDALS[i] + (i+1) + '</div>' +
+      '<div class="ranking-name">' + p + '</div>' +
+      '<div class="ranking-wins"><div><span class="num">' + stats[p].w1 + '</span><span class="unit"> 回１位</span></div>' +
+      '<div style="color:#aaa;font-size:13px;">' + stats[p].games + '局</div></div>' +
+    '</div>'
+  ).join('');
+  const rl=$('rounds-list'), nr=$('no-rounds');
+  if (!t.rounds.length) { rl.innerHTML=''; nr.style.display=''; return; }
+  nr.style.display='none';
+  rl.innerHTML=[...t.rounds].reverse().map((r,i)=>{
+    const num=t.rounds.length-i;
+    const rk=[...r.ranks].sort((a,b)=>a.rank-b.rank);
+    return '<div class="round-card"><div class="round-header">第 '+num+' 局</div><div class="round-ranks">' +
+      rk.map(item=>'<div class="round-rank-item"><span class="r-num">'+item.rank+'位</span><span style="font-size:clamp(17px,3vw,22px);font-weight:700;">'+item.name+'</span></div>').join('<span style="color:#ccc;font-size:18px;">›</span>') +
+    '</div></div>';
+  }).join('');
+}
+
+// ===== RANK INPUT =====
+function startRound() {
+  const t = getTable();
+  rankState = {remaining:[...t.players], done:[]};
+  renderRankInput();
+  show('s-rank');
+}
+function anotherRound() { startRound(); }
+function renderRankInput() {
+  $('rank-q-num').textContent = rankState.done.length+1;
+  $('rank-done-list').innerHTML = rankState.done.map(item=>
+    '<div class="rank-done-item"><span class="rank-done-num">'+item.rank+'位</span><span class="rank-done-name">'+item.name+'</span></div>'
+  ).join('');
+  $('rank-player-list').innerHTML = rankState.remaining.map(name=>
+    '<button class="rank-player-btn" onclick="pickRank(\''+name+'\')">'+name+'</button>'
+  ).join('');
+}
+function pickRank(name) {
+  rankState.done.push({name, rank:rankState.done.length+1});
+  rankState.remaining = rankState.remaining.filter(n=>n!==name);
+  if (rankState.remaining.length===0) saveRound();
+  else renderRankInput();
+}
+function saveRound() {
+  const t = getTable();
+  t.rounds.push({ranks:[...rankState.done]});
+  saveTables();
+  showResult();
+}
+function showResult() {
+  const sorted = [...rankState.done].sort((a,b)=>a.rank-b.rank);
+  $('result-list').innerHTML = sorted.map((item,i)=>
+    '<div class="result-item" style="animation-delay:'+(0.05+i*0.07)+'s">' +
+      '<div class="result-medal">'+MEDALS[i]+'</div>' +
+      '<div class="result-name">'+item.name+'</div>' +
+      '<div class="result-rank-num">'+item.rank+'位</div>' +
+    '</div>'
+  ).join('');
+  show('s-result');
+}
+function goDetail() { renderDetail(); show('s-detail'); }
+
+renderHome();
+</script>
+</body>
+</html>
